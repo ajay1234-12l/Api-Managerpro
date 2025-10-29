@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block content %}
+<h4>Settings</h4>
+<div class="card p-3">
+  <form method="post" action="{{ url_for('settings') }}">
+    <div class="mb-3">
+      <label class="form-label">API Base URL</label>
+      <input class="form-control" name="api_base" value="{{ cfg.api_base }}">
+      <div class="form-text">Base of your API, e.g. https://newptemi-jejj.vercel.app</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Admin username</label>
+      <input class="form-control" name="admin_user" value="{{ cfg.admin_user }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Change admin password</label>
+      <input class="form-control" name="admin_pass" placeholder="leave blank to keep existing">
+    </div>
+    <div class="d-grid"><button class="btn btn-primary">Save Settings</button></div>
+  </form>
+</div>
+{% endblock %}
