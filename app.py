@@ -244,36 +244,89 @@ def settings():
 def api_keys():
     if not logged_in():
         return jsonify({"error": "not logged in"}), 401
+
     ok, data = try_fetch_keys()
     if not ok:
         return jsonify({"error": data}), 500
-    # normalize list items to have key, total_requests, remaining_requests, expires_at fields if possible
+
     normalized = []
+    today = date.today()
+
     for item in data:
-        # item might be a dict from remote API with different field names
-        if isinstance(item, dict):
-            keyname = item.get("key") or item.get("key_value") or item.get("value") or item.get("Key") or item.get("KeyName") or item.get("name")
-            total = item.get("total_requests") or item.get("total") or item.get("TotalRequests") or item.get("requests_total")
-            remaining = item.get("remaining_requests") or item.get("remaining") or item.get("RemainingRequests") or item.get("requests_remaining")
-            expires = item.get("expires_at") or item.get("expiry") or item.get("expires") or item.get("ExpiresAt")
-            # sometimes like "500/600" in a single field
-            request_field = item.get("requests") or item.get("Request") or item.get("RequestCount")
-            if request_field and isinstance(request_field, str) and "/" in request_field:
-                parts = request_field.split("/")
-                try:
-                    remaining = int(parts[0].strip())
-                    total = int(parts[1].strip())
-                except:
-                    pass
-            normalized.append({
-                "key": keyname or str(item),
-                "total": int(total) if isinstance(total,(int,str)) and str(total).isdigit() else (int(total) if isinstance(total,int) else (None)),
-                "remaining": int(remaining) if isinstance(remaining,(int,str)) and str(remaining).isdigit() else (int(remaining) if isinstance(remaining,int) else None),
-                "expires_at": expires or "",
-                "raw": item
-            })
-        else:
-            normalized.append({"key": str(item), "total": None, "remaining": None, "expires_at": "", "raw": item})
+        if not isinstance(item, dict):
+            continue
+
+        keyname = (
+            item.get("key")
+            or item.get("key_value")
+            or item.get("value")
+            or item.get("Key")
+            or item.get("KeyName")
+            or item.get("name")
+        )
+
+        total = (
+            item.get("total_requests")
+            or item.get("total")
+            or item.get("TotalRequests")
+            or item.get("requests_total")
+        )
+
+        remaining = (
+            item.get("remaining_requests")
+            or item.get("remaining")
+            or item.get("RemainingRequests")
+            or item.get("requests_remaining")
+        )
+
+        expires = (
+            item.get("expires_at")
+            or item.get("expiry")
+            or item.get("expires")
+            or item.get("ExpiresAt")
+        )
+
+        # handle request string like "500/600"
+        request_field = (
+            item.get("requests")
+            or item.get("Request")
+            or item.get("RequestCount")
+        )
+        if request_field and isinstance(request_field, str) and "/" in request_field:
+            parts = request_field.split("/")
+            try:
+                remaining = int(parts[0].strip())
+                total = int(parts[1].strip())
+            except:
+                pass
+
+        # ⛔ Skip deleted keys (soft/hard)
+        if item.get("deleted") or item.get("is_deleted") or str(item.get("status")).lower() in ["deleted", "inactive"]:
+            continue
+
+        # ⛔ Skip expired keys
+        if expires:
+            try:
+                exp_date = None
+                for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%Y.%m.%d"):
+                    try:
+                        exp_date = datetime.strptime(expires, fmt).date()
+                        break
+                    except:
+                        continue
+                if exp_date and exp_date < today:
+                    continue  # expired -> skip
+            except:
+                pass
+
+        normalized.append({
+            "key": keyname or str(item),
+            "total": int(total) if str(total).isdigit() else None,
+            "remaining": int(remaining) if str(remaining).isdigit() else None,
+            "expires_at": expires or "",
+            "raw": item
+        })
+
     return jsonify({"keys": normalized})
 
 @app.route("/api/key/create", methods=["POST"])
