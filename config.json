@@ -1,5 +1,5 @@
 {
-  "api_base": "https://newptemi-jejj.vercel.app",
+  "api_base": "https://newptemi-five.vercel.app",
   "admin_user": "admin",
   "admin_password_hash": "pbkdf2:sha256:260000$egCfWUDAXBsSn2q9$129103eefe863d5259dc8167ab2ca50ddf3d79fcc6d2bc34df4b0934cc231940",
   "auto_try_list_endpoints": [
